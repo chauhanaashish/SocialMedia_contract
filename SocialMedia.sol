@@ -16,7 +16,7 @@ contract SocialMedia {
         string[] likesGiven;                  
     }
     struct Post {
-        uint postNumber;
+        uint postNumber;                        // fot that specific user
         address author;
         string contentId;                        // unique identifier
         string[] comments;
@@ -38,22 +38,23 @@ contract SocialMedia {
     event PostCreated(address indexed author, string content, uint indexed postNumber);
     event CommentAdded(address indexed author, string content, uint indexed commentNumber);
     event LikeGiven(address indexed sender, string contentHash);
+    event SupportGiven(address indexed sender, address indexed recipient, string indexed postId, uint256 amount);
 
-    function updateProfile(string memory _username, string memory _bio) public {
+    function createProfile(string memory _username, string memory _bio) public {
         address userAddress = msg.sender;
         
         if (userProfiles[userAddress].userAddress == address(0)) {
             userProfiles[userAddress] = UserProfile(userAddress, _username, _bio,0,0,0, new string[](0), new string[](0), new string[](0));
             allUsers.push(userAddress);
-        } else {
+        } 
+    }
+
+    function updateProfile(string memory _username, string memory _bio) public {
+        address userAddress = msg.sender;        
             userProfiles[userAddress].username = _username;
             userProfiles[userAddress].bio = _bio;
-        }
+        
         emit ProfileUpdated(userAddress, _username, _bio);
-    }
-    
-    function getAllUsers() public view returns (address[] memory) {
-        return allUsers;
     }    
 
     function createPost(string memory _contentId) public {
@@ -66,7 +67,8 @@ contract SocialMedia {
         uint postNumber = userProfiles[author].postCount;
         
         posts[contentId] = Post(postNumber, author, contentId, new string[](0), new address[](0));
-        //imp                                    now push this post in UserProfile Structure using mapping
+        
+        //imp                now push this post in UserProfile Structure using mapping
         userProfiles[author].userPosts.push(contentId);
 
         emit PostCreated(author, contentId, postNumber);
@@ -105,11 +107,39 @@ contract SocialMedia {
         emit LikeGiven(sender, postId);
     }
 
+    function supportCreator(string memory _postId) public payable {
+
+        require(posts[_postId].author != address(0), "Post does not exist");
+        require(posts[_postId].author != msg.sender, "Cannot support your own post");
+        require(msg.value > 0, "Must send some Ether to support the creator");
+
+        address payable author = payable(posts[_postId].author);
+        author.transfer(msg.value);
+        
+        emit SupportGiven(msg.sender, posts[_postId].author, _postId, msg.value);
+    }
+
+
     function getPostDetails(string memory _contentId) public view returns (string[] memory, address[] memory) {
         return (posts[_contentId].comments, posts[_contentId].likes);
     }
 
     function getUserDetails(address _address) public view returns (string[] memory, string[] memory, string[] memory) {
         return (userProfiles[_address].userPosts, userProfiles[_address].userComments, userProfiles[_address].likesGiven);
-    }   
+    }
+
+    // function getAllUsers() public view returns (address[] memory) {
+    //     return allUsers;
+    // }
+    function getAllUsers() public view returns (string[] memory) {
+    string[] memory usernames = new string[](allUsers.length);
+    for (uint i = 0; i < allUsers.length; i++) {
+        usernames[i] = userProfiles[allUsers[i]].username;
+    }
+    return usernames;
 }
+
+
+    
+}
+
